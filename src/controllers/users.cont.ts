@@ -1,22 +1,103 @@
 import { Request, Response } from "express";
+import { AddressSchema, UpdateUserSchema } from "../schema/users";
+import { prismaClient } from "..";
+import { Address, User } from "../generated/prisma";
+import { NotFoundException } from "../exceptions/not-found";
+import { ErrorCode } from "../exceptions/root";
+import { BadRequestsException } from "../exceptions/bad-requests";
 
-export const addAddress = async (
-  req: Request,
-  res: Response,
-) => {
-  
+interface AuthenticatedRequest extends Request {
+  user?: User;
+}
+
+export const addAddress = async (req: AuthenticatedRequest, res: Response) => {
+  AddressSchema.parse(req.body);
+  const address = await prismaClient.address.create({
+    data: {
+      ...req.body,
+      userId: req.user?.id,
+    },
+  });
+  res.json(address);
 };
 
-export const deleteAddress = async (
-  req: Request,
-  res: Response,
-) => {
-  
+export const deleteAddress = async (req: Request, res: Response) => {
+  try {
+    await prismaClient.address.delete({
+      where: {
+        id: parseInt(req.params.id),
+      },
+    });
+    res.json({ success: true });
+  } catch (error) {
+    throw new NotFoundException(
+      "Address not found",
+      ErrorCode.ADDRESS_NOT_FOUND
+    );
+  }
 };
 
 export const getAllAddresses = async (
-  req: Request,
-  res: Response,
+  req: AuthenticatedRequest,
+  res: Response
 ) => {
-  
+  const addresses = await prismaClient.address.findMany({
+    where: {
+      userId: req.user?.id,
+    },
+  });
+  res.json(addresses);
+};
+
+export const updateUser = async (req: AuthenticatedRequest, res: Response) => {
+  const validData: any = UpdateUserSchema.parse(req.body);
+  let shippingAddress: Address;
+  let billingAddress: Address;
+  if (validData.defaultBilliningAddress) {
+    try {
+      billingAddress = await prismaClient.address.findFirstOrThrow({
+        where: {
+          id: validData.defaultBilliningAddress,
+        },
+      });
+    } catch (error) {
+      throw new NotFoundException(
+        "Address not found",
+        ErrorCode.ADDRESS_NOT_FOUND
+      );
+    }
+    if (billingAddress.userId != req.user?.id) {
+      throw new BadRequestsException(
+        "Address does not belong",
+        ErrorCode.ADDRESS_DOES_NOT_BELONG
+      );
+    }
+  }
+  if (validData.defaultShippingAddress) {
+    try {
+      shippingAddress = await prismaClient.address.findFirstOrThrow({
+        where: {
+          id: validData.defaultShippingAddress,
+        },
+      });
+    } catch (error) {
+      throw new NotFoundException(
+        "Address not found",
+        ErrorCode.ADDRESS_NOT_FOUND
+      );
+    }
+    if (shippingAddress.userId != req.user?.id) {
+      throw new BadRequestsException(
+        "Address does not belong",
+        ErrorCode.ADDRESS_DOES_NOT_BELONG
+      );
+    }
+  }
+  const updatedUser = await prismaClient.user.update({
+    where: {
+      id: req.user?.id,
+    },
+    data: validData,
+  });
+  res.json(updatedUser);
 };
