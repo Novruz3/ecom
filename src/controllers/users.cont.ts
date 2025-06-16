@@ -1,5 +1,9 @@
 import { Request, Response } from "express";
-import { AddressSchema, UpdateUserSchema } from "../schema/users";
+import {
+  AddressSchema,
+  ChangeUserRoleSchema,
+  UpdateUserSchema,
+} from "../schema/users";
 import { prismaClient } from "..";
 import { Address, User } from "../generated/prisma";
 import { NotFoundException } from "../exceptions/not-found";
@@ -100,4 +104,48 @@ export const updateUser = async (req: AuthenticatedRequest, res: Response) => {
     data: validData,
   });
   res.json(updatedUser);
+};
+
+export const getAllUsers = async (req: Request, res: Response) => {
+  const skip = parseInt(req.query.skip as string) || 0;
+  const take = parseInt(req.query.take as string) || 10;
+  const [users, count] = await Promise.all([
+    prismaClient.user.findMany({
+      skip,
+      take,
+    }),
+    prismaClient.user.count(),
+  ]);
+  res.json({ count, data: users });
+};
+
+export const getUserById = async (req: Request, res: Response) => {
+  try {
+    const user = await prismaClient.user.findFirstOrThrow({
+      where: {
+        id: parseInt(req.params.id),
+      },
+      include: { addresses: true },
+    });
+    res.json(user);
+  } catch (error) {
+    throw new NotFoundException("User not found", ErrorCode.USER_NOT_FOUND);
+  }
+};
+
+export const changeUserRole = async (req: Request, res: Response) => {
+  ChangeUserRoleSchema.parse(req.body);
+  try {
+    const user = await prismaClient.user.update({
+      where: {
+        id: parseInt(req.params.id),
+      },
+      data: {
+        role: req.body.role,
+      },
+    });
+    res.json(user);
+  } catch (error) {
+    throw new NotFoundException("User not found", ErrorCode.USER_NOT_FOUND);
+  }
 };
