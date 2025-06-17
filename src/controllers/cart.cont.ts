@@ -2,17 +2,10 @@ import { Request, Response } from "express";
 import { CreateCartSchema, UpdateCartSchema } from "../schema/cart";
 import { NotFoundException } from "../exceptions/not-found";
 import { ErrorCode } from "../exceptions/root";
-import { Product, User } from "../generated/prisma";
+import { Product } from "../generated/prisma";
 import { prismaClient } from "..";
 
-interface AuthenticatedRequest extends Request {
-  user: User;
-}
-
-export const addItemToCart = async (
-  req: AuthenticatedRequest,
-  res: Response
-) => {
+export const addItemToCart = async (req: Request, res: Response) => {
   const validData = CreateCartSchema.parse(req.body);
   let product: Product;
   try {
@@ -29,7 +22,7 @@ export const addItemToCart = async (
   }
   const cart = await prismaClient.cartItem.create({
     data: {
-      userId: req.user?.id,
+      userId: req.user?.id!,
       productId: product.id,
       quantity: validData.quantity,
     },
@@ -76,7 +69,7 @@ export const changeQuantity = async (req: Request, res: Response) => {
   }
 };
 
-export const getCart = async (req: AuthenticatedRequest, res: Response) => {
+export const getCart = async (req: Request, res: Response) => {
   const carts = await prismaClient.cartItem.findMany({
     where: {
       id: req.user?.id,

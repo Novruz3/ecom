@@ -7,11 +7,6 @@ import { BadRequestsException } from "../exceptions/bad-requests";
 import { ErrorCode } from "../exceptions/root";
 import { SignUpSchema } from "../schema/users";
 import { NotFoundException } from "../exceptions/not-found";
-import { User } from "../generated/prisma";
-
-interface AuthenticatedRequest extends Request {
-  user?: User
-}
 
 export const signUp = async (
   req: Request,
@@ -58,6 +53,6 @@ export const login = async (req: Request, res: Response) => {
   res.json({ user, token });
 };
 
-export const me = async (req : AuthenticatedRequest, res : Response) => {
+export const me = async (req : Request, res : Response) => {
   res.json(req.user)
 }

@@ -6,12 +6,16 @@ import { JWT_SECRET } from "../secrets";
 import { prismaClient } from "..";
 import { User } from "../generated/prisma";
 
-interface AuthRequest extends Request {
-  user?: User;
+declare global {
+  namespace Express {
+    interface Request {
+      user?: User;
+    }
+  }
 }
 
 const authMiddleware = async (
-  req: AuthRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ) => {

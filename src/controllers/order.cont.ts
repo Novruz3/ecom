@@ -1,18 +1,13 @@
 import { Request, Response } from "express";
 import { prismaClient } from "..";
-import { User } from "../generated/prisma";
 import { NotFoundException } from "../exceptions/not-found";
 import { ErrorCode } from "../exceptions/root";
 
-interface AuthenticatedRequest extends Request {
-  user: User;
-}
-
-export const createOrder = async (req: AuthenticatedRequest, res: Response) => {
+export const createOrder = async (req: Request, res: Response) => {
   return await prismaClient.$transaction(async (tx) => {
     const cartItems = await tx.cartItem.findMany({
       where: {
-        userId: req.user.id,
+        userId: req.user?.id,
       },
       include: {
         product: true,
@@ -26,12 +21,12 @@ export const createOrder = async (req: AuthenticatedRequest, res: Response) => {
     }, 0);
     const address = await tx.address.findFirst({
       where: {
-        id: req.user.defaultShippingAddress!,
+        id: req.user?.defaultShippingAddress!,
       },
     });
     const order = await tx.order.create({
       data: {
-        userId: req.user.id,
+        userId: req.user?.id!,
         netAmount: price,
         address: address?.formattedAddress!,
         products: {
@@ -44,24 +39,24 @@ export const createOrder = async (req: AuthenticatedRequest, res: Response) => {
         },
       },
     });
-    const orderEvent = await tx.orderEvent.create({
+    await tx.orderEvent.create({
       data: {
         orderId: order.id,
       },
     });
     await tx.cartItem.deleteMany({
       where: {
-        userId: req.user.id,
+        userId: req.user?.id,
       },
     });
     return res.json(order);
   });
 };
 
-export const getOrders = async (req: AuthenticatedRequest, res: Response) => {
+export const getOrders = async (req: Request, res: Response) => {
   const orders = await prismaClient.order.findMany({
     where: {
-      userId: req.user.id,
+      userId: req.user?.id,
     },
   });
   res.json(orders);

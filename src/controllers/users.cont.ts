@@ -5,16 +5,12 @@ import {
   UpdateUserSchema,
 } from "../schema/users";
 import { prismaClient } from "..";
-import { Address, User } from "../generated/prisma";
+import { Address } from "../generated/prisma";
 import { NotFoundException } from "../exceptions/not-found";
 import { ErrorCode } from "../exceptions/root";
 import { BadRequestsException } from "../exceptions/bad-requests";
 
-interface AuthenticatedRequest extends Request {
-  user?: User;
-}
-
-export const addAddress = async (req: AuthenticatedRequest, res: Response) => {
+export const addAddress = async (req: Request, res: Response) => {
   AddressSchema.parse(req.body);
   const address = await prismaClient.address.create({
     data: {
@@ -41,10 +37,7 @@ export const deleteAddress = async (req: Request, res: Response) => {
   }
 };
 
-export const getAllAddresses = async (
-  req: AuthenticatedRequest,
-  res: Response
-) => {
+export const getAllAddresses = async (req: Request, res: Response) => {
   const addresses = await prismaClient.address.findMany({
     where: {
       userId: req.user?.id,
@@ -53,7 +46,7 @@ export const getAllAddresses = async (
   res.json(addresses);
 };
 
-export const updateUser = async (req: AuthenticatedRequest, res: Response) => {
+export const updateUser = async (req: Request, res: Response) => {
   const validData: any = UpdateUserSchema.parse(req.body);
   let shippingAddress: Address;
   let billingAddress: Address;

@@ -21,5 +21,5 @@ export const UpdateUserSchema = z.object({
 });
 
 export const ChangeUserRoleSchema = z.object({
-  role: z.string()
+  role: z.string(),
 });
